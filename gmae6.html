@@ -1,0 +1,607 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake.io Ultimate</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:Arial,sans-serif;
+  background:#070b18;
+  color:white;
+  overflow:hidden;
+}
+#game{
+  width:100%;
+  height:100dvh;
+  position:relative;
+  background:#080e20;
+}
+canvas{width:100%;height:100%;display:block}
+
+/* TOP BAR */
+.topbar{
+  position:absolute;top:15px;left:15px;right:15px;
+  display:flex;justify-content:space-between;
+  align-items:flex-start;pointer-events:none;gap:10px;
+}
+.glass{
+  background:rgba(10,18,40,.78);
+  border:1px solid rgba(255,255,255,.13);
+  backdrop-filter:blur(16px);
+  border-radius:16px;padding:13px 17px;
+  box-shadow:0 8px 30px #0004;
+}
+.logo{
+  font-size:23px;font-weight:1000;
+  letter-spacing:1px;color:#55f5d4;
+  text-shadow:0 0 16px #55f5d4;
+}
+.stat{font-size:13px;color:#b9c9e9;margin-top:5px}
+.stat b{color:white}
+.righttop{display:flex;gap:10px;align-items:flex-start}
+.leaderboard{min-width:155px}
+.leaderboard h3{font-size:12px;color:#55f5d4;margin-bottom:8px}
+.leaderboard p{font-size:12px;margin:5px 0;color:#e5edff}
+.iconbtn{
+  pointer-events:auto;border:1px solid #ffffff25;
+  color:white;background:#111d39;padding:12px;
+  border-radius:13px;font-size:18px;cursor:pointer;
+}
+
+/* MENUS */
+.overlay{
+  position:absolute;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(3,7,18,.76);
+  backdrop-filter:blur(12px);padding:15px;
+}
+.hidden{display:none!important}
+.menu{
+  width:min(430px,100%);max-height:90%;
+  overflow-y:auto;text-align:center;
+  padding:30px 25px;border-radius:25px;
+  background:linear-gradient(145deg,#172547,#0b142b);
+  border:1px solid #ffffff25;
+  box-shadow:0 25px 80px #0009;
+}
+.menu h1{
+  font-size:39px;font-weight:1000;
+  color:#55f5d4;text-shadow:0 0 20px #55f5d477;
+}
+.subtitle{color:#aebcdb;font-size:13px;line-height:1.6;margin:10px 0 22px}
+input,select{
+  width:100%;padding:13px;margin:7px 0;
+  border-radius:11px;border:1px solid #ffffff20;
+  background:#09132b;color:white;font-size:14px;
+  outline:none;
+}
+button{
+  cursor:pointer;border:0;border-radius:12px;
+  padding:13px 17px;font-weight:bold;font-size:14px;
+  transition:.2s;
+}
+button:hover{transform:translateY(-2px);filter:brightness(1.15)}
+.primary{
+  color:#071322;width:100%;
+  background:linear-gradient(120deg,#55f5d4,#83a0ff);
+  box-shadow:0 5px 20px #55f5d433;
+}
+.secondary{
+  background:#23365d;color:white;border:1px solid #ffffff20;
+}
+.menu-actions{display:flex;gap:10px;margin-top:12px}
+.menu-actions button{flex:1}
+.settings-title{
+  text-align:left;font-size:12px;color:#55f5d4;
+  margin:16px 0 5px;font-weight:bold;letter-spacing:1px;
+}
+.setting-row{
+  display:flex;justify-content:space-between;
+  align-items:center;gap:12px;
+  text-align:left;padding:10px 0;
+  border-bottom:1px solid #ffffff12;
+  font-size:13px;color:#dce6ff;
+}
+.setting-row select{width:52%;margin:0;padding:9px}
+.setting-row input[type=checkbox]{width:20px;height:20px;accent-color:#55f5d4}
+.skin-options{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:7px;
+}
+.skin{
+  height:43px;border-radius:10px;
+  border:2px solid transparent;cursor:pointer;
+}
+.skin.selected{border-color:white;box-shadow:0 0 12px white}
+.hint{font-size:11px;color:#8596bb;margin-top:15px;line-height:1.6}
+.mobile-controls{
+  position:absolute;bottom:22px;right:18px;
+  display:grid;grid-template-columns:48px 48px 48px;
+  grid-template-rows:48px 48px;gap:5px;z-index:2;
+}
+.mobile-controls button{
+  padding:0;border-radius:50%;
+  background:#55f5d4d9;color:#061324;font-size:20px;
+}
+.up{grid-column:2}.left{grid-column:1;grid-row:2}
+.down{grid-column:2;grid-row:2}.right{grid-column:3;grid-row:2}
+@media(min-width:850px){.mobile-controls{display:none}}
+@media(max-width:500px){
+  .logo{font-size:18px}
+  .glass{padding:10px}
+  .leaderboard{min-width:120px}
+  .leaderboard p{font-size:10px}
+  .stat{font-size:11px}
+}
+</style>
+</head>
+
+<body>
+<div id="game">
+<canvas id="canvas"></canvas>
+
+<div class="topbar">
+  <div class="glass">
+    <div class="logo">SNAKE.IO <span style="font-size:10px">ULTIMATE</span></div>
+    <div class="stat">SCORE: <b id="score">0</b></div>
+    <div class="stat">BEST: <b id="best">0</b></div>
+  </div>
+
+  <div class="righttop">
+    <div class="glass leaderboard">
+      <h3>🏆 LEADERBOARD</h3>
+      <div id="leaders"></div>
+    </div>
+    <button class="iconbtn" onclick="openSettings()">⚙️</button>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="overlay" id="home">
+ <div class="menu">
+  <h1>SNAKE.IO</h1>
+  <p class="subtitle">ULTIMATE ARENA EXPERIENCE<br>Eat • Grow • Survive • Dominate</p>
+  <input id="playerName" maxlength="12" value="Player" placeholder="Your snake name">
+  <button class="primary" onclick="startGame()">▶ PLAY GAME</button>
+  <div class="menu-actions">
+   <button class="secondary" onclick="openSettings()">⚙ SETTINGS</button>
+   <button class="secondary" onclick="showHelp()">❔ HOW TO PLAY</button>
+  </div>
+  <p class="hint">A colourful Snake.io-inspired arcade game</p>
+ </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay hidden" id="settings">
+ <div class="menu">
+  <h1 style="font-size:30px">SETTINGS</h1>
+  <p class="subtitle">Customize your arena experience</p>
+
+  <div class="settings-title">GRAPHICS</div>
+  <div class="setting-row">
+   Graphics quality
+   <select id="quality">
+    <option>Low</option><option selected>Medium</option>
+    <option>High</option><option>Ultra</option>
+   </select>
+  </div>
+  <div class="setting-row">
+   Arena theme
+   <select id="theme">
+    <option value="neon">Neon City</option>
+    <option value="cyber">Cyberpunk</option>
+    <option value="galaxy">Galaxy</option>
+    <option value="ocean">Ocean</option>
+   </select>
+  </div>
+  <div class="setting-row">
+   Show background grid
+   <input type="checkbox" id="grid" checked>
+  </div>
+  <div class="setting-row">
+   Glow effects
+   <input type="checkbox" id="glow" checked>
+  </div>
+  <div class="setting-row">
+   Particles
+   <input type="checkbox" id="particles" checked>
+  </div>
+
+  <div class="settings-title">GAMEPLAY</div>
+  <div class="setting-row">
+   Game speed
+   <select id="speed">
+    <option value="1.7">Chill</option>
+    <option value="2.4" selected>Normal</option>
+    <option value="3.2">Fast</option>
+    <option value="4">Extreme</option>
+   </select>
+  </div>
+  <div class="setting-row">
+   Number of bots
+   <select id="botCount">
+    <option value="3">3 Bots</option>
+    <option value="5">5 Bots</option>
+    <option value="8" selected>8 Bots</option>
+    <option value="12">12 Bots</option>
+   </select>
+  </div>
+
+  <div class="settings-title">AUDIO</div>
+  <div class="setting-row">
+   Sound effects
+   <input type="checkbox" id="sound" checked>
+  </div>
+
+  <div class="settings-title">CHOOSE YOUR SNAKE SKIN</div>
+  <div class="skin-options" id="skins">
+   <button class="skin selected" data-skin="rainbow" style="background:linear-gradient(90deg,red,orange,yellow,green,blue)"></button>
+   <button class="skin" data-skin="fire" style="background:linear-gradient(90deg,#ffea00,#ff4500,#d90000)"></button>
+   <button class="skin" data-skin="ice" style="background:linear-gradient(90deg,#fff,#75eaff,#397aff)"></button>
+   <button class="skin" data-skin="toxic" style="background:linear-gradient(90deg,#caff00,#24d45c,#007a44)"></button>
+   <button class="skin" data-skin="gold" style="background:linear-gradient(90deg,#fff2a3,#ffb700,#a66b00)"></button>
+  </div>
+
+  <div class="menu-actions">
+   <button class="secondary" onclick="closeSettings()">BACK</button>
+   <button class="primary" onclick="saveSettings()">SAVE SETTINGS</button>
+  </div>
+ </div>
+</div>
+
+<!-- GAME OVER -->
+<div class="overlay hidden" id="over">
+ <div class="menu">
+  <h1>GAME OVER</h1>
+  <p class="subtitle">Your final score: <b id="finalScore">0</b></p>
+  <button class="primary" onclick="startGame()">↻ PLAY AGAIN</button>
+  <div class="menu-actions">
+   <button class="secondary" onclick="goHome()">HOME</button>
+   <button class="secondary" onclick="openSettings()">SETTINGS</button>
+  </div>
+ </div>
+</div>
+
+<!-- HELP -->
+<div class="overlay hidden" id="help">
+ <div class="menu">
+  <h1 style="font-size:30px">HOW TO PLAY</h1>
+  <p class="subtitle">
+   🟢 Collect glowing food to grow your snake.<br><br>
+   🐍 Avoid running into other snakes.<br><br>
+   🏆 Grow bigger and climb the leaderboard.<br><br>
+   🖱 Desktop: Move your mouse to steer.<br>
+   ⌨ Keyboard: Use arrow keys or WASD.<br>
+   📱 Mobile: Use the direction buttons.
+  </p>
+  <button class="primary" onclick="closeHelp()">GOT IT</button>
+ </div>
+</div>
+
+<div class="mobile-controls">
+ <button class="up" onclick="direction(0,-1)">▲</button>
+ <button class="left" onclick="direction(-1,0)">◀</button>
+ <button class="down" onclick="direction(0,1)">▼</button>
+ <button class="right" onclick="direction(1,0)">▶</button>
+</div>
+</div>
+
+<script>
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+let W,H,dpr=1;
+let player,bots=[],foods=[],particles=[];
+let running=false,frame=0,score=0,best=Number(localStorage.getItem("ultimateSnakeBest")||0);
+let mouse={x:0,y:0};
+let selectedSkin="rainbow";
+let settings={
+ quality:"Medium",theme:"neon",speed:2.4,bots:8,
+ grid:true,glow:true,particles:true,sound:true
+};
+const $=id=>document.getElementById(id);
+$("best").textContent=best;
+
+const themes={
+ neon:{bg:"#09152a",grid:"#25446a",food:["#55f5d4","#ff5d9e","#ffd166","#a78bfa"]},
+ cyber:{bg:"#180d29",grid:"#69335e",food:["#ff45d4","#faff00","#4dfcff","#ff8145"]},
+ galaxy:{bg:"#100c29",grid:"#473c78",food:["#bd8cff","#ff75c8","#69e7ff","#fff2a3"]},
+ ocean:{bg:"#061e2d",grid:"#17627a",food:["#4df5d4","#58aaff","#a4f8ff","#d1ffec"]}
+};
+
+function resize(){
+ dpr=Math.min(devicePixelRatio||1,2);
+ W=canvas.clientWidth;H=canvas.clientHeight;
+ canvas.width=W*dpr;canvas.height=H*dpr;
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize",resize);resize();
+
+function random(a,b){return Math.random()*(b-a)+a}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+
+function skinColor(i){
+ if(selectedSkin==="fire")return ["#fff000","#ff8c00","#ff3c18","#b80000"][i%4];
+ if(selectedSkin==="ice")return ["#ffffff","#8ceeff","#55aaff","#396cff"][i%4];
+ if(selectedSkin==="toxic")return ["#d8ff00","#81e600","#28c75b","#087b46"][i%4];
+ if(selectedSkin==="gold")return ["#fff4a8","#ffce45","#e99b16","#a66c00"][i%4];
+ return ["#ff4e78","#ffb347","#faff70","#55f5d4","#56aaff","#b68aff"][i%6];
+}
+
+function snake(name,x,y,color,isPlayer=false){
+ return {
+  name,x,y,color,isPlayer,
+  angle:random(0,Math.PI*2),
+  speed:isPlayer?settings.speed:random(1.5,2.1),
+  radius:11,length:isPlayer?18:12,
+  trail:[],turn:random(-1,1)
+ };
+}
+function food(){
+ let t=themes[settings.theme];
+ return {x:random(15,W-15),y:random(15,H-15),
+ color:t.food[Math.floor(random(0,t.food.length))],r:random(3,6)};
+}
+
+function startGame(){
+ $("home").classList.add("hidden");
+ $("settings").classList.add("hidden");
+ $("help").classList.add("hidden");
+ $("over").classList.add("hidden");
+ score=0;$("score").textContent=0;
+ player=snake($("playerName").value.trim()||"Player",W/2,H/2,"#55f5d4",true);
+ bots=[];
+ for(let i=0;i<settings.bots;i++){
+  let b=snake("BOT "+(i+1),random(50,W-50),random(70,H-70),
+  ["#ff5d8f","#ffbd4a","#a78bfa","#4bbaff","#9bff62"][i%5]);
+  bots.push(b);
+ }
+ foods=[];
+ for(let i=0;i<130;i++)foods.push(food());
+ particles=[];
+ mouse={x:W/2+100,y:H/2};
+ running=true;frame=0;
+ requestAnimationFrame(loop);
+}
+
+function direction(x,y){
+ if(player&&running)player.angle=Math.atan2(y,x);
+}
+
+canvas.addEventListener("mousemove",e=>{
+ let r=canvas.getBoundingClientRect();
+ mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;
+});
+canvas.addEventListener("touchmove",e=>{
+ if(!running)return;
+ e.preventDefault();
+ let r=canvas.getBoundingClientRect();
+ mouse.x=e.touches[0].clientX-r.left;
+ mouse.y=e.touches[0].clientY-r.top;
+},{passive:false});
+
+function steer(s){
+ if(s.isPlayer){
+  let target=Math.atan2(mouse.y-s.y,mouse.x-s.x);
+  let d=target-s.angle;
+  while(d>Math.PI)d-=Math.PI*2;
+  while(d< -Math.PI)d+=Math.PI*2;
+  s.angle+=d*.09;
+ }else{
+  s.turn+=random(-.08,.08);
+  s.turn=Math.max(-1,Math.min(1,s.turn));
+  s.angle+=s.turn*.025;
+  let near=null,nd=Infinity;
+  for(let f of foods){
+   let d=distance(s,f);
+   if(d<nd){nd=d;near=f}
+  }
+  if(near&&nd<160){
+   let a=Math.atan2(near.y-s.y,near.x-s.x);
+   let d=a-s.angle;
+   while(d>Math.PI)d-=Math.PI*2;
+   while(d< -Math.PI)d+=Math.PI*2;
+   s.angle+=d*.025;
+  }
+ }
+ s.x+=Math.cos(s.angle)*s.speed;
+ s.y+=Math.sin(s.angle)*s.speed;
+ s.x=Math.max(12,Math.min(W-12,s.x));
+ s.y=Math.max(12,Math.min(H-12,s.y));
+ s.trail.unshift({x:s.x,y:s.y});
+ if(s.trail.length>s.length)s.trail.pop();
+}
+
+function drawSnake(s){
+ for(let i=s.trail.length-1;i>=0;i--){
+  let p=s.trail[i];
+  let size=s.radius*(1-i/(s.trail.length+12)*.35);
+  ctx.beginPath();
+  ctx.arc(p.x,p.y,size,0,Math.PI*2);
+  ctx.fillStyle=s.isPlayer?skinColor(Math.floor(i/4)):s.color;
+  if(settings.glow){
+   ctx.shadowColor=ctx.fillStyle;
+   ctx.shadowBlur=settings.quality==="Low"?3:12;
+  }
+  ctx.fill();
+ }
+ ctx.shadowBlur=0;
+ // Head
+ ctx.beginPath();ctx.arc(s.x,s.y,s.radius+1,0,Math.PI*2);
+ ctx.fillStyle=s.isPlayer?skinColor(0):s.color;ctx.fill();
+ // Eyes
+ let ex=s.x+Math.cos(s.angle)*5,ey=s.y+Math.sin(s.angle)*5;
+ ctx.fillStyle="white";
+ ctx.beginPath();
+ ctx.arc(ex-3,ey-3,3,0,Math.PI*2);
+ ctx.arc(ex+3,ey+3,3,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#101525";
+ ctx.beginPath();
+ ctx.arc(ex-3,ey-3,1.3,0,Math.PI*2);
+ ctx.arc(ex+3,ey+3,1.3,0,Math.PI*2);ctx.fill();
+ ctx.font="bold 12px Arial";ctx.textAlign="center";
+ ctx.fillStyle="white";ctx.shadowColor="#000";ctx.shadowBlur=5;
+ ctx.fillText(s.name,s.x,s.y-20);ctx.shadowBlur=0;
+}
+
+function drawFoods(){
+ for(let f of foods){
+  ctx.beginPath();ctx.arc(f.x,f.y,f.r+3,0,Math.PI*2);
+  ctx.fillStyle=f.color+"33";ctx.fill();
+  ctx.beginPath();ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+  ctx.fillStyle=f.color;
+  if(settings.glow){ctx.shadowColor=f.color;ctx.shadowBlur=12}
+  ctx.fill();ctx.shadowBlur=0;
+ }
+}
+
+function burst(x,y,color){
+ if(!settings.particles)return;
+ let count=settings.quality==="Ultra"?12:settings.quality==="High"?7:3;
+ for(let i=0;i<count;i++){
+  particles.push({x,y,vx:random(-2,2),vy:random(-2,2),life:1,color});
+ }
+}
+function drawParticles(){
+ for(let i=particles.length-1;i>=0;i--){
+  let p=particles[i];
+  p.x+=p.vx;p.y+=p.vy;p.life-=.035;
+  ctx.globalAlpha=Math.max(0,p.life);
+  ctx.fillStyle=p.color;
+  ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();
+  ctx.globalAlpha=1;
+  if(p.life<=0)particles.splice(i,1);
+ }
+}
+
+function collect(s){
+ for(let i=foods.length-1;i>=0;i--){
+  let f=foods[i];
+  if(distance(s,f)<s.radius+f.r+3){
+   foods.splice(i,1);foods.push(food());
+   s.length+=3;
+   burst(f.x,f.y,f.color);
+   if(s.isPlayer){
+    score++;$("score").textContent=score;
+    if(score>best){
+     best=score;$("best").textContent=best;
+     localStorage.setItem("ultimateSnakeBest",best);
+    }
+   }
+  }
+ }
+}
+
+function collision(){
+ for(let b of bots){
+  for(let i=8;i<b.trail.length;i++){
+   if(distance(player,b.trail[i])<player.radius+b.radius*.65){endGame();return}
+  }
+ }
+ for(let i=12;i<player.trail.length;i++){
+  if(distance(player,player.trail[i])<player.radius*1.2){endGame();return}
+ }
+}
+
+function background(){
+ let t=themes[settings.theme];
+ ctx.fillStyle=t.bg;ctx.fillRect(0,0,W,H);
+ if(settings.grid){
+  let step=settings.quality==="Low"?70:40;
+  ctx.strokeStyle=t.grid+"55";ctx.lineWidth=1;
+  for(let x=0;x<W;x+=step){
+   ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  }
+  for(let y=0;y<H;y+=step){
+   ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+  }
+ }
+ // Subtle arena border
+ ctx.strokeStyle=t.grid;ctx.lineWidth=3;
+ ctx.strokeRect(2,2,W-4,H-4);
+}
+
+function updateLeaders(){
+ let all=[player,...bots].sort((a,b)=>b.length-a.length);
+ $("leaders").innerHTML=all.slice(0,5).map((s,i)=>
+ `<p>${i+1}. ${s.name} — ${s.length}</p>`).join("");
+}
+
+function loop(){
+ if(!running)return;
+ frame++;
+ background();drawFoods();
+ steer(player);bots.forEach(steer);
+ collect(player);bots.forEach(collect);
+ drawParticles();
+ drawSnake(player);bots.forEach(drawSnake);
+ collision();updateLeaders();
+ if(running)requestAnimationFrame(loop);
+}
+
+function endGame(){
+ running=false;
+ $("finalScore").textContent=score;
+ $("over").classList.remove("hidden");
+}
+
+function openSettings(){
+ $("home").classList.add("hidden");
+ $("over").classList.add("hidden");
+ $("settings").classList.remove("hidden");
+}
+function closeSettings(){
+ $("settings").classList.add("hidden");
+ if(!player||!running)$("home").classList.remove("hidden");
+}
+function saveSettings(){
+ settings.quality=$("quality").value;
+ settings.theme=$("theme").value;
+ settings.speed=Number($("speed").value);
+ settings.bots=Number($("botCount").value);
+ settings.grid=$("grid").checked;
+ settings.glow=$("glow").checked;
+ settings.particles=$("particles").checked;
+ settings.sound=$("sound").checked;
+ if(player)player.speed=settings.speed;
+ $("settings").classList.add("hidden");
+ if(!player||!running)$("home").classList.remove("hidden");
+}
+function showHelp(){
+ $("home").classList.add("hidden");
+ $("help").classList.remove("hidden");
+}
+function closeHelp(){
+ $("help").classList.add("hidden");
+ $("home").classList.remove("hidden");
+}
+function goHome(){
+ running=false;
+ $("over").classList.add("hidden");
+ $("home").classList.remove("hidden");
+}
+
+document.querySelectorAll(".skin").forEach(btn=>{
+ btn.addEventListener("click",()=>{
+  document.querySelectorAll(".skin").forEach(b=>b.classList.remove("selected"));
+  btn.classList.add("selected");
+  selectedSkin=btn.dataset.skin;
+ });
+});
+
+document.addEventListener("keydown",e=>{
+ if(!running)return;
+ const keys={
+  ArrowUp:[0,-1],ArrowDown:[0,1],
+  ArrowLeft:[-1,0],ArrowRight:[1,0],
+  w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]
+ };
+ if(keys[e.key]){
+  e.preventDefault();direction(...keys[e.key]);
+ }
+});
+</script>
+</body>
+</html>
